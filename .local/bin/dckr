@@ -1,0 +1,86 @@
+#!/bin/bash
+
+# dckr - Main dispatcher (git-like architecture)
+# Routes commands to specialized executables
+
+# Load extension libraries (suppress self-test output)
+source "$(which _dispatcher)" >/dev/null 2>&1 || {
+    echo "Error: _dispatcher extension library not found" >&2
+    exit 1
+}
+
+# Basic path setup
+BIN_DIR=$(dirname "$(readlink -f "$0")")
+LIBEXEC_DIR="$BIN_DIR/../libexec/dckr"
+
+# Load common utilities for error handling and basic functions
+if [[ -f "$LIBEXEC_DIR/dckr-common" ]]; then
+    source "$LIBEXEC_DIR/dckr-common"
+else
+    # Fallback error handling if common library is missing
+    echo "Error: dckr installation appears to be incomplete" >&2
+    echo "Missing: $LIBEXEC_DIR/dckr-common" >&2
+    exit 1
+fi
+
+# Initialize dispatcher
+dispatcher-init "dckr" "$BIN_DIR" "$DCKR_VERSION" "Docker Stack Manager - v${DCKR_VERSION}"
+
+# Override dispatcher help with dckr-specific help
+dispatcher-show-help() {
+    cat << 'EOF'
+Docker Stack Manager - v2.0.0
+
+Usage: dckr <command> [options]
+
+Core Commands:
+  stack list              List all Docker Compose stacks
+  stack <name>            Show detailed information for a stack
+  ai <command> [args]     AI-powered stack management and troubleshooting
+  config <operation>      Configuration management
+
+Utility Commands:
+  help                    Show this help message
+  version                 Show version information
+
+Examples:
+  dckr stack list
+  dckr stack media
+  dckr ai analyze-stack media
+  dckr ai debug-stack authentik network
+  dckr config get core.docker_sock
+
+AI Features:
+  • Intelligent stack analysis and optimization
+  • Automated troubleshooting and debugging
+  • AI-powered configuration generation
+  • Performance monitoring and recommendations
+
+Architecture:
+  • Modular design following git-like patterns
+  • Shared libraries for optimal performance
+  • Extensible command structure
+  • Configuration management system
+
+For command-specific help: dckr <command> help
+EOF
+
+    echo ""
+    echo "Available command modules:"
+    dispatcher-list-commands
+}
+
+# Override version display
+dispatcher-show-version() {
+    dckr_show_version
+}
+
+# Debug mode
+if [[ "${DCKR_DEBUG:-}" == "1" ]]; then
+    echo "Debug: dckr called with args: $*" >&2
+    echo "Debug: BIN_DIR=$BIN_DIR" >&2
+    echo "Debug: LIBEXEC_DIR=$LIBEXEC_DIR" >&2
+fi
+
+# Execute using dispatcher
+dispatcher-execute "$@"
